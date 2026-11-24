@@ -1,0 +1,84 @@
+
+name: Build ZPill Unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zpill-ios-ipa
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Build iPhone IPA
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      # 1. 下载源码
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      # 2. 安装 Flutter
+      # 与作者现有 CI 保持相同版本
+      - name: Setup Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+
+      # 3. 检查环境
+      - name: Check Flutter
+        run: flutter doctor -v
+
+      # 4. 获取依赖
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 5. 编译 iPhone 真机 Release
+      # 不使用 Apple 签名证书
+      - name: Build iOS unsigned
+        run: |
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --build-number=${GITHUB_RUN_NUMBER}
+
+      # 6. 检查编译产物
+      - name: Verify app
+        run: |
+          test -d build/ios/iphoneos/Runner.app
+
+          /usr/libexec/PlistBuddy \
+            -c "Print :CFBundleIdentifier" \
+            build/ios/iphoneos/Runner.app/Info.plist
+
+      # 7. 打包成 IPA
+      - name: Package IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+
+          cp -R \
+            build/ios/iphoneos/Runner.app \
+            "$RUNNER_TEMP/ipa/Payload/"
+
+          cd "$RUNNER_TEMP/ipa"
+
+          /usr/bin/zip -qry \
+            "$GITHUB_WORKSPACE/ZPill-unsigned.ipa" \
+            Payload
+
+          test -f "$GITHUB_WORKSPACE/ZPill-unsigned.ipa"
+
+      # 8. 上传 IPA
+      - name: Upload IPA
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ZPill-unsigned-IPA
+          path: ZPill-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
