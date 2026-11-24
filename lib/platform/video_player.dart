@@ -123,12 +123,12 @@ Widget embeddedVideoViewBuilder(
       onPlatformViewCreated: onCreated,
     );
   }
-  if (Platform.operatingSystem == 'ohos') {
-    return OhosView(
-      viewType: 'zpill/video-view',
-      onPlatformViewCreated: onCreated,
-    );
-  }
+  // if (Platform.operatingSystem == 'ohos') {
+  //   return OhosView(
+  //     viewType: 'zpill/video-view',
+  //     onPlatformViewCreated: onCreated,
+  //   );
+  // }
   // 门禁外平台(supportsEmbeddedView=false):空占位,不应走到。
   return const SizedBox.expand();
 }
@@ -138,9 +138,8 @@ final class MethodChannelVideoPlayer implements VideoPlayer {
 
   @override
   bool get supportsEmbeddedView =>
-      Platform.isIOS ||
-      Platform.isAndroid ||
-      Platform.operatingSystem == 'ohos';
+      Platform.isIOS || Platform.isAndroid; 
+      // || Platform.operatingSystem == 'ohos';
 
   @override
   Future<void> loadEmbeddedView(int viewId, String path) async {
